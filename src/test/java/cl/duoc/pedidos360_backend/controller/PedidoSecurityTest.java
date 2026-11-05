@@ -1,5 +1,7 @@
 package cl.duoc.pedidos360_backend.controller;
 
+import cl.duoc.pedidos360_backend.messaging.event.PedidoCreadoEvent;
+import cl.duoc.pedidos360_backend.messaging.producer.PedidoEventPublisher;
 import cl.duoc.pedidos360_backend.model.Pedido;
 import cl.duoc.pedidos360_backend.repository.PedidoRepository;
 import org.junit.jupiter.api.Test;
@@ -10,9 +12,15 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -27,6 +35,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * la validación de firma/issuer/client_id se cubre en
  * CognitoAccessTokenValidatorTest
  * y en la prueba manual con un token real de Cognito.
+ * <p>
+ * El publicador de RabbitMQ se reemplaza por un mock: así los tests no
+ * necesitan un broker y además se verifica que el evento se publique.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,6 +54,9 @@ class PedidoSecurityTest {
 
     @Autowired
     private PedidoRepository repository;
+
+    @MockitoBean
+    private PedidoEventPublisher publisher;
 
     @Test
     void sinToken_devuelve401ConCuerpoJson() throws Exception {
@@ -82,6 +96,11 @@ class PedidoSecurityTest {
                 .andExpect(jsonPath("$.estado").value("PENDIENTE"))
                 .andExpect(jsonPath("$.producto").value("Notebook"))
                 .andExpect(jsonPath("$.clienteSub").value("user"));
+
+        // Se publicó un evento "pedido creado" con los datos del pedido guardado.
+        verify(publisher).publicarPedidoCreado(argThat((PedidoCreadoEvent e) ->
+                e.pedidoId() != null && "Notebook".equals(e.producto()) && e.cantidad() == 2
+                        && "user".equals(e.clienteSub())));
     }
 
     @Test
@@ -90,6 +109,9 @@ class PedidoSecurityTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"producto\":\"Notebook\",\"cantidad\":0}"))
                 .andExpect(status().isBadRequest());
+
+        // Un pedido inválido no se guarda, así que tampoco se publica.
+        verify(publisher, never()).publicarPedidoCreado(any());
     }
 
     @Test

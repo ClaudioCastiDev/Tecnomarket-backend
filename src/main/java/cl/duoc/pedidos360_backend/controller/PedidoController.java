@@ -2,8 +2,8 @@ package cl.duoc.pedidos360_backend.controller;
 
 import cl.duoc.pedidos360_backend.dto.PedidoRequest;
 import cl.duoc.pedidos360_backend.dto.PedidoResponse;
-import cl.duoc.pedidos360_backend.model.Pedido;
 import cl.duoc.pedidos360_backend.repository.PedidoRepository;
+import cl.duoc.pedidos360_backend.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -31,9 +30,11 @@ import java.util.List;
 public class PedidoController {
 
     private final PedidoRepository repository;
+    private final PedidoService pedidoService;
 
-    public PedidoController(PedidoRepository repository) {
+    public PedidoController(PedidoRepository repository, PedidoService pedidoService) {
         this.repository = repository;
+        this.pedidoService = pedidoService;
     }
 
     @GetMapping
@@ -51,9 +52,8 @@ public class PedidoController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PedidoResponse crear(@Valid @RequestBody PedidoRequest request, @AuthenticationPrincipal Jwt jwt) {
-        Pedido pedido = new Pedido(Pedido.ESTADO_PENDIENTE, request.producto(), request.cantidad(),
-                jwt.getSubject(), LocalDateTime.now());
-        return PedidoResponse.from(repository.save(pedido));
+        // El servicio guarda el pedido y publica el evento; el controlador no conoce RabbitMQ.
+        return PedidoResponse.from(pedidoService.crear(request, jwt.getSubject()));
     }
 
     @DeleteMapping("/{id}")

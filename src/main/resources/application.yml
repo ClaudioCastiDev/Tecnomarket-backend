@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: pedidos360-backend
+
+  # --- Base de datos (RDS MySQL): credenciales SIEMPRE por variables de entorno ---
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  # --- Conexión al clúster RabbitMQ (2 nodos) ---
+  # "addresses" admite varios nodos: si uno cae, el cliente se conecta al otro.
+  rabbitmq:
+    addresses: ${RABBIT_ADDRESSES:localhost:5672,localhost:5673}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASS:guest}
+    # El broker confirma (ack) cada publicación y devuelve los mensajes que no
+    # llegaron a ninguna cola. Ambos se registran en el log del publicador.
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+
+server:
+  port: 8081
+
+# --- Seguridad: Amazon Cognito (identificadores públicos, no son secretos) ---
+app:
+  security:
+    issuer-uri: ${COGNITO_ISSUER_URI:https://cognito-idp.us-east-1.amazonaws.com/us-east-1_pSWQKRHyI}
+    client-id: ${COGNITO_CLIENT_ID:506umnko0aikhdkunuvpmd9n45}
+
+# --- Nombres de mensajería centralizados (indicador de la pauta) ---
+# Ninguna clase Java escribe estos nombres a mano: todas los leen desde aquí a través
+# de TecnomarketRabbitProperties. Son los MISMOS que en productos y mensajería.
+tecnomarket:
+  rabbit:
+    exchanges:
+      # direct: mensajes dirigidos a un servicio concreto (stock, ticket)
+      pedidos: tecnomarket.pedidos.direct
+      # topic: eventos de difusión; cualquiera se suscribe por patrón (pedido.#)
+      eventos: tecnomarket.eventos.topic
+    routing-keys:
+      stock: pedido.stock          # -> q.stock (productos descuenta stock)
+      ticket: pedido.ticket        # -> q.ticket (mensajería genera el ticket)
+      pedido-creado: pedido.creado # -> q.notificaciones (mensajería notifica)
+
+# --- Actuator: solo health ---
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
