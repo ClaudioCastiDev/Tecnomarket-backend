@@ -2,7 +2,7 @@
 
 Microservicio de pedidos de **TecnoMarket**, una tienda en línea de productos tecnológicos construida con arquitectura de microservicios en AWS. Registra los pedidos en su propia base de datos y publica el evento `PedidoCreado` en RabbitMQ para que el resto del sistema continúe el trabajo de forma asíncrona.
 
-Proyecto académico individual · Desarrollo Cloud Native I (Duoc UC).
+Proyecto académico · Desarrollo Cloud Native I (Duoc UC).
 
 ## Repositorios del proyecto
 
@@ -128,6 +128,7 @@ Resultado conjunto de los cuatro repositorios: 98 pruebas automatizadas, 0 fallo
 | Una petición con datos inválidos responde 403 en lugar de 400. | Permitir la ruta `/error` en la configuración de seguridad. |
 | Credenciales en archivos de entorno de la instancia. | AWS Secrets Manager o Parameter Store. |
 
-## Autor
+## Autores
 
 Claudio Castillo · [GitHub](https://github.com/ClaudioCastiDev) · [LinkedIn](https://www.linkedin.com/in/claudiocastillo-)
+Santiago Lopez
